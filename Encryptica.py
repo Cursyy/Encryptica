@@ -1,5 +1,11 @@
 import string
 import random
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from Crypto.Cipher import DES, Blowfish
+from Crypto.Util.Padding import pad, unpad
 
 # Glodal variables
 text:str = input("Enter text: ").upper()
@@ -59,3 +65,45 @@ def vigenere_decrypt(encrypted_message, key):
             decrypted_message.append(encrypted_message[i])
 
     return ''.join(decrypted_message)
+
+# RSA
+def generate_rsa_keys():
+    private_key: str = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    public_key = private_key.public_key()
+    return private_key, public_key
+
+def rsa_encrypt(public_key, message):
+    if isinstance(message, str):
+        message = message.encode()
+    encrypted_message = public_key.encrypt(
+        message,
+        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+    )
+    return encrypted_message
+
+def rsa_decrypt(private_key, encrypted_message):
+    decrypted_message = private_key.decrypt(
+        encrypted_message,
+        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+    )
+    return decrypted_message.decode()
+
+# DES
+def create_des_cipher(key):
+    if len(key) != 8:
+        raise ValueError("DES key must be exactly 8 bytes long")
+    cipher = DES.new(key, DES.MODE_CBC)
+    return cipher
+
+def des_encrypt(cipher, plaintext):
+    plaintext = pad(plaintext.encode(), DES.block_size) 
+    ciphertext = cipher.encrypt(plaintext)
+    return ciphertext, cipher.iv
+
+def des_decrypt(key, ciphertext, iv):
+    cipher = DES.new(key, DES.MODE_CBC, iv=iv)
+    decrypted_message = unpad(cipher.decrypt(ciphertext), DES.block_size)
+    return decrypted_message.decode()  
